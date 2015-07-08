@@ -1,0 +1,22 @@
+name: JumpGame
+author: Linkos
+version: 0.9
+main: classes.main
+
+commands:
+  JumpGame:
+    description: A JumpnRun plugin for you to have fun!
+    usage: /<jumpgame>
+    
+permissions:
+  jumpgame.*:
+    description: Gives access to all JumpGame commands. ( Equals jumpgame.admin )  
+    default: op
+    children:
+      jumpgame.admin: true
+  jumpgame.admin:
+    description: Gives access to all JumpGame commands. ( Equals jumpgame.* )   
+    default: op
+  jumpgame.user:
+    description: Gives all needed permissions for a normal user.  
+    default: true 
