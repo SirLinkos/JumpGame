@@ -3,7 +3,7 @@ package classes;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.ChatColor;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -86,11 +86,11 @@ public class main
       cfg.set("PlayerInfo." + p.getName() + ".Arena", "Is not playing!");
       saveConfig();
 
-      p.sendMessage(this.prefix + "§3You have left the arena!");
+      p.sendMessage(this.prefix + "Â§3You have left the arena!");
     }
     else
     {
-      p.sendMessage(this.prefix + "§cYou are not in a jump arena!");
+      p.sendMessage(this.prefix + "Â§cYou are not in a jump arena!");
     }
   }
 	 public void sbclear(Player p){
@@ -132,7 +132,7 @@ public void setupScoreboard(Player p){
 		    ScoreboardManager manager = Bukkit.getScoreboardManager();
 		    Scoreboard board = manager.getNewScoreboard();
 	 
-		     String none = "§r";
+		     String none = "Â§r";
 		     String ArenaName = ChatColor.RED + cfg.getString("PlayerInfo." + p.getName() + ".Arena");
 		     String ArenaPre = ChatColor.DARK_AQUA + "You are in the arena:";
 		     String FailsPre = ChatColor.DARK_AQUA + "Times you failed:";
@@ -141,7 +141,7 @@ public void setupScoreboard(Player p){
 		     String Timer = ChatColor.GREEN + "" + this.timemin.get(p.getName()) + ":" + this.timer.get(p.getName()) + " sek";
 		     Objective objective = board.registerNewObjective("test", "SideBoard");
 		     objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-		     objective.setDisplayName(ChatColor.BOLD + "§6JUMP§3GAME");
+		     objective.setDisplayName(ChatColor.BOLD + "Â§6JUMPÂ§3GAME");
 		    Score none1 = objective.getScore(none);
 		     none1.setScore(97);
 		     Score arp1 = objective.getScore(ArenaPre);
