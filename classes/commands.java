@@ -16,11 +16,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.ScoreboardManager;
 
 public class commands
   implements CommandExecutor
@@ -44,7 +39,7 @@ public class commands
       {
         sendHelp1(p);
       }
-      if (args[0].equalsIgnoreCase("help")){
+      else if (args[0].equalsIgnoreCase("help")){
 	      if(p.hasPermission("jumpgame.user")){
 		        sendHelp1(p);
 		        return true;
@@ -56,7 +51,8 @@ public class commands
     
     else if (args[0].equalsIgnoreCase("debug")){
 	      if(p.hasPermission("jumpgame.user")){
-		        setupScoreboard(p);
+		        plugin.setupScoreboard(p);
+		    	Bukkit.getServer().getScheduler().cancelTask(1);
 		        return true;
 		  }
 	      else{
@@ -110,7 +106,12 @@ public class commands
 		              
 		              p.setGameMode(GameMode.ADVENTURE);
 		              
-		              setupScoreboard(p);
+		              plugin.failsact.put(p.getName(), 0);
+		              
+		              plugin.timemin.put(p.getName(), 0);
+		          	  plugin.timer.put(p.getName(), 0);
+		              plugin.Stopwatch(p);
+
 		              
 		              p.sendMessage(plugin.prefix + ChatColor.GREEN + "Teleported to " + args[1] + "!");
 		              
@@ -151,15 +152,10 @@ public class commands
 	    	  if(p.hasPermission("jumpgame.user")){
 	        	  teleportToCheckpoint(p);
 	        	  
-	        	  if(cfg.get("PlayerInfo." + p.getName() + ".failsact") == null){
-	        	  cfg.set("PlayerInfo." + p.getName() + ".failsact", 0);
-	        	  }
-	        	  else{
-	        		  int fails = cfg.getInt("PlayerInfo." + p.getName() + ".failsact");
-	        		  int failsnew = fails + 1;
-	        		  cfg.set("PlayerInfo." + p.getName() + ".failsact", failsnew);
-	        	  }
-	              setupScoreboard(p);
+	              Integer newfails = new Integer(plugin.failsact.get(p.getName()) + 1);
+	    		  plugin.failsact.put(p.getName(), newfails);
+	        	  
+	             plugin.setupScoreboard(p);
 	    	  }
 	    	  else{
 	    		 p.sendMessage(plugin.noperm);
@@ -201,6 +197,17 @@ public class commands
 	    		    	p.sendMessage(plugin.prefix + ChatColor.AQUA + "Arenaname: " + ChatColor.GOLD + args[1] );
 	    		    	p.sendMessage(plugin.prefix + ChatColor.AQUA + "Experience required: " + ChatColor.GOLD + cfg.getInt("spawns." + args[1] + ".experience"));
 	    		    	p.sendMessage(plugin.prefix + ChatColor.AQUA + "Experience reward: "+ ChatColor.GOLD + cfg.getInt("spawns." + args[1] + ".reward"));
+	    		    	if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." + args[1] + ".sek") == 0){
+	    		    		if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." + args[1] + ".min") ==0){
+	    		    			p.sendMessage(plugin.prefix + ChatColor.AQUA + "No record yet.");
+	    		    		}
+	    		    		else{
+	    		    			p.sendMessage(plugin.prefix + ChatColor.AQUA + "Your record: "+ ChatColor.GOLD + cfg.getInt("PlayerInfo." + p.getName() + ".Times." +args[1] + ".min")+ " min" +cfg.getInt("PlayerInfo." + p.getName() + ".Times." + args[1] + ".sek")+ " sek");
+	    		    		}
+	    		    	}else{
+	    		    		p.sendMessage(plugin.prefix + ChatColor.AQUA + "Your record: "+ ChatColor.GOLD + cfg.getInt("PlayerInfo." + p.getName() + ".Times." +args[1] + ".min")+ " min" +cfg.getInt("PlayerInfo." + p.getName() + ".Times." + args[1] + ".sek")+ " sek");
+	    		    	}
+	    		    	
 	    		    }
 	    	  }
 	    	  else{
@@ -345,38 +352,4 @@ public class commands
 	    p.teleport(loc);
     }
   }
-  
-   public void setupScoreboard(Player p){
-		 FileConfiguration cfg = this.plugin.getConfig();
-		    ScoreboardManager manager = Bukkit.getScoreboardManager();
-		    Scoreboard board = manager.getNewScoreboard();
-	 
-		     String none = "§r";
-		     String PluginName = ChatColor.GOLD + "Jump" + ChatColor.DARK_AQUA +"Game";
-		     String ArenaName = ChatColor.RED + cfg.getString("PlayerInfo." + p.getName() + ".Arena");
-		     String ArenaPre = ChatColor.DARK_AQUA + "You are in the arena:";
-		     String FailsPre = ChatColor.DARK_AQUA + "Times you failed:";
-		     String Fails = ChatColor.RED + "" + cfg.getInt("PlayerInfo." + p.getName() + ".failsact");
-		     Objective objective = board.registerNewObjective("test", "SideBoard");
-		     objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-		     objective.setDisplayName(ChatColor.BOLD + "§2Zwergen§3Craft");
-		     Score top = objective.getScore(none);
-		     top.setScore(99);
-		    Score name = objective.getScore(PluginName);
-		    name.setScore(98);
-		    Score none1 = objective.getScore(none);
-		     none1.setScore(97);
-		     Score arp1 = objective.getScore(ArenaPre);
-		     arp1.setScore(96);
-		    Score sited1 = objective.getScore(ArenaName);
-		    sited1.setScore(95);
-		    Score none2 = objective.getScore(none);
-		     none2.setScore(94);
-		    Score failspre1 = objective.getScore(FailsPre);
-		    failspre1.setScore(93);
-		    Score fails1 = objective.getScore(Fails);
-		    fails1.setScore(92);
-		     p.setScoreboard(board);
-	}
-
 }

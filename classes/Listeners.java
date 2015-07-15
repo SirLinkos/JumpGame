@@ -10,10 +10,12 @@ import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.FireworkEffect.Type;
+import org.bukkit.block.Sign;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
@@ -23,6 +25,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
@@ -34,12 +37,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
-import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.ScoreboardManager;
 
 public class Listeners
@@ -128,6 +125,25 @@ public class Listeners
     }
   }
   @EventHandler
+  public void onSignChange(SignChangeEvent e){
+	  Player p = e.getPlayer();
+	  FileConfiguration cfg = this.plugin.getConfig();
+	   if (!this.plugin.inJump.contains(e.getPlayer().getName())) {
+		 Set<String>tmp = cfg.getConfigurationSection("spawns.").getKeys(false);
+		    for(String s: tmp)
+		   if(e.getLine(0).contains("[JumpGame]") &&
+			  e.getLine(1).contains(s)){
+			   e.setLine(0, "§8[§6Jump§3Game§8]");
+			   e.setLine(2, "" );
+			   e.setLine(3, "§2Join");
+		   }
+	   }else{
+		   p.sendMessage(plugin.prefix + ChatColor.RED + "You cant do this now");
+	   }
+		   
+  }
+  
+  @EventHandler
   public void onInteract(PlayerInteractEvent e)
   {
    if (this.plugin.inJump.contains(e.getPlayer().getName())) {
@@ -153,7 +169,95 @@ public class Listeners
 			        }
 			
 		}
-      }
+   }
+	if(e.getClickedBlock().getType().equals(Material.WALL_SIGN)){
+		 if(e.getAction() == Action.RIGHT_CLICK_BLOCK){
+			if(e.getClickedBlock().getState() instanceof Sign){
+				Player p = e.getPlayer();
+			    String ArenaPath = "PlayerInfo." + p.getName() + ".Arena";
+			    String PlayerExpPath = "PlayerInfo."+ p.getPlayer().getName() + ".Experience";
+				Sign s = (Sign) e.getClickedBlock().getState();
+				FileConfiguration cfg = this.plugin.getConfig();
+				
+	    		  Set<String>tmp = cfg.getConfigurationSection("spawns.").getKeys(false);
+	    		    for(String are: tmp)
+	    		    	
+				if(s.getLine(1).contains(are)){
+					String Arena = s.getLine(1);
+					if(cfg.getInt(PlayerExpPath) >= cfg.getInt("spawns." + Arena + ".experience")){
+	  		              World w = Bukkit.getServer().getWorld(cfg.getString("spawns." + Arena + ".world"));
+	  		              double x = cfg.getDouble("spawns." + Arena + ".x");
+	  		              double y = cfg.getDouble("spawns." + Arena + ".y");
+	  		              double z = cfg.getDouble("spawns." + Arena + ".z");
+	  		              this.plugin.oldLoc.put(p.getName(), p.getLocation());
+	  		              
+	  		        	  plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+	  		        		  private Player player;
+	  		        		  private World world;
+	  		        		  private double xpos;
+	  		        		  private double ypos;
+	  		        		  private double zpos;
+	  		        		  public void run(){
+	  		        			player.teleport(new Location(world, xpos, ypos, zpos)); 
+	  		        			  }
+	  		            	  private Runnable init(Player p, World w, double x, double y, double z){
+	  		            		  player = p;
+	  		            		  world = w;
+	  		            		  xpos = x;
+	  		            		  ypos = y;
+	  		            		  zpos = z;
+	  		            		  return this;
+	  		            	  }
+	  		        	  }.init(p,w,x,y,z)
+	  		        	  , 5L);
+	  		              
+	  		              cfg.set("PlayerInfo." + p.getPlayer().getName() + ".checkpoints." + Arena + ".world", p.getLocation().getWorld().getName());
+	  		              cfg.set("PlayerInfo." + p.getPlayer().getName() + ".checkpoints." + Arena + ".x", Double.valueOf(p.getLocation().getX()));
+	  		              cfg.set("PlayerInfo." + p.getPlayer().getName() + ".checkpoints." + Arena + ".y", Double.valueOf(p.getLocation().getY()));
+	  		              cfg.set("PlayerInfo." + p.getPlayer().getName() + ".checkpoints." + Arena + ".z", Double.valueOf(p.getLocation().getZ()));
+	  		              
+	  		              this.plugin.inJump.add(p.getName());
+	  		              cfg.set(ArenaPath, Arena);
+	  		              
+	  		              this.plugin.oldItems.put(p.getName(), p.getInventory().getContents());
+	  		              p.getInventory().clear();
+	  		              p.updateInventory();
+	  		              ItemStack itemstack = new ItemStack(Material.STICK, 1);
+	  		              ItemMeta im = itemstack.getItemMeta();
+	  		              im.setDisplayName( "§2PlayerHider");
+	  		              itemstack.setItemMeta(im);
+	  		              p.getInventory().addItem(itemstack);
+	  		              p.updateInventory();
+	  		              
+	  		              p.setGameMode(GameMode.ADVENTURE);
+	  		              
+	  		              plugin.failsact.put(p.getName(), 0);
+	  		              
+	  		              plugin.timemin.put(p.getName(), 0);
+	  		          	  plugin.timer.put(p.getName(), 0);
+	  		              plugin.Stopwatch(p);
+
+	  		              
+	  		              p.sendMessage(plugin.prefix + ChatColor.GREEN + "Teleported to " + Arena + "!");
+	  		              
+	  		              
+	  		              this.plugin.saveConfig();
+	  		              if(cfg.get("PlayerInfo." + p.getPlayer().getName() + ".Experience") == null){
+	  		            	  cfg.set("PlayerInfo." + p.getPlayer().getName() + ".Experience", 0);
+	  		              }
+	  	              }
+	  	            	else {
+	  	            		p.sendMessage(plugin.prefix + ChatColor.AQUA + "You don´t have enough experience to start this parkour!");
+	  	            		p.sendMessage(plugin.prefix + ChatColor.AQUA + "You need "+ ChatColor.GREEN + cfg.getInt("spawns." + Arena + ".experience") + " experience" + ChatColor.AQUA +  " to start this parkour.");
+	  	            		p.sendMessage(plugin.prefix + ChatColor.AQUA + "You have " + ChatColor.GREEN + cfg.getInt(PlayerExpPath) +" experience"+ ChatColor.AQUA +".");
+	  	            	}
+					}
+			 }
+		}
+	
+     }else if(e.getClickedBlock().getType().equals(null)){
+    	 System.out.println("§aTest");
+     }
    }
   
   
@@ -167,28 +271,17 @@ public class Listeners
       String ArenaPath = "PlayerInfo." + p.getName() + ".Arena";
       String PlayerExpPath = "PlayerInfo."+ p.getPlayer().getName() + ".Experience";
       Material m = p.getLocation().subtract(0.0D, 1.0D, 0.0D).getBlock().getType();
-      if (m == Material.SPONGE)
-      {
-    	  
-        p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20, 3));
-        p.playSound(p.getLocation(), Sound.FIREWORK_BLAST2, 15.0F, 2.0F);
-      }
       
-      else if ((m.equals(Material.WATER)) || (m.equals(Material.STATIONARY_WATER)) || (m.equals(Material.LAVA)) || (m.equals(Material.STATIONARY_LAVA)))
+      if ((m.equals(Material.WATER)) || (m.equals(Material.STATIONARY_WATER)) || (m.equals(Material.LAVA)) || (m.equals(Material.STATIONARY_LAVA)))
       {
     	  
         teleportToCheckpoint(p);
         p.sendMessage(ChatColor.AQUA + "Better luck next time!");
         
-	  	  if(cfg.get("PlayerInfo." + p.getName() + ".failsact") == null){
-	  	  cfg.set("PlayerInfo." + p.getName() + ".failsact", 0);
-	  	  }
-	  	  else{
-	  		  int fails = cfg.getInt("PlayerInfo." + p.getName() + ".failsact");
-	  		  int failsnew = fails + 1;
-	  		  cfg.set("PlayerInfo." + p.getName() + ".failsact", failsnew);
-	  	  }
-          setupScoreboard(p);
+        Integer newfails = new Integer(plugin.failsact.get(p.getName()) + 1);
+		plugin.failsact.put(p.getName(), newfails);
+        
+          plugin.setupScoreboard(p);
       }
       
       else if(m == Material.DIAMOND_BLOCK){
@@ -197,17 +290,69 @@ public class Listeners
         	  p.sendMessage(plugin.prefix + ChatColor.GREEN + "Congratulations! You have finished the arena.");
         	  RocketLauncher(e.getPlayer());
         	  if(cfg.get("PlayerInfo." + p.getName() + ".failsoverall") == null){
-        	  cfg.set("PlayerInfo." + p.getName() + ".failsoverall", cfg.getInt("PlayerInfo." + p.getName() + ".failsact") );
+        	  cfg.set("PlayerInfo." + p.getName() + ".failsoverall", plugin.failsact.get(p.getName()) );
         	  }
         	  else{
-        		  int failsoa = cfg.getInt("PlayerInfo." + p.getName() + ".failsact") + cfg.getInt("PlayerInfo." + p.getName() + ".failsoverall");
+        		  int failsoa = plugin.failsact.get(p.getName()) + cfg.getInt("PlayerInfo." + p.getName() + ".failsoverall");
         		  cfg.set("PlayerInfo." + p.getName() + ".failsoverall", failsoa);
         	  }
-	  		  cfg.set("PlayerInfo." + p.getName() + ".failsact", 0);
+	  		  plugin.failsact.put(p.getName(), 0);
         	  
         	  p.sendMessage(plugin.prefix + ChatColor.GREEN + "You earned " + ChatColor.GOLD + cfg.getInt("spawns." + cfg.getString(ArenaPath) + ".reward") + " experience.");
         	  int newxpstand = cfg.getInt("spawns." + cfg.getString(ArenaPath) + ".reward") + cfg.getInt(PlayerExpPath);
         	  cfg.set(PlayerExpPath , newxpstand);
+        	  
+        	  
+        	  
+        	  int Timesek = this.plugin.timer.get(p.getName());
+        	  int Timemin = this.plugin.timemin.get(p.getName());
+        	  
+    	  
+	    	  if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min") != 0){
+	    		if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek") != 0){
+		    	  if(Timemin< cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min")){
+	    			  p.sendMessage(plugin.prefix + ChatColor.GREEN + "New Record! Time: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+	            	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min", Timemin );
+	            	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek", Timesek );
+	        	  }
+		        	  else if(Timemin == cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min")){
+		        		  if(Timesek< cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek")){
+		        			  p.sendMessage(plugin.prefix + ChatColor.GREEN + "New Record! Time: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+		                	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min", Timemin );
+		                	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek", Timesek );
+		        		  }else{
+		            		  p.sendMessage(plugin.prefix + ChatColor.GREEN + "You finished the arena with a time of: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+		            		  p.sendMessage(plugin.prefix + ChatColor.GRAY + "No new record.");
+		        		  }
+		    		  }
+	    	     }else{
+           		  p.sendMessage(plugin.prefix + ChatColor.GREEN + "You finished the arena with a time of: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+           		  p.sendMessage(plugin.prefix + ChatColor.GRAY + "No new record.");
+	    	     }
+	    		
+        	  
+
+        	  }else{
+        		  if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min") == 0){
+        			  if(cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek") == 0){
+        	  			  p.sendMessage(plugin.prefix + ChatColor.GREEN + "Finished the arena for the first time! Time: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+        	        	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min", Timemin );
+        	        	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek", Timesek );
+        		      }else if(Timesek< cfg.getInt("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek")){
+	        			  p.sendMessage(plugin.prefix + ChatColor.GREEN + "New Record! Time: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+	                	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".min", Timemin );
+	                	  cfg.set("PlayerInfo." + p.getName() + ".Times." +cfg.getString(ArenaPath) + ".sek", Timesek );
+	        		  }else{
+	               		  p.sendMessage(plugin.prefix + ChatColor.GREEN + "You finished the arena with a time of: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+	               		  p.sendMessage(plugin.prefix + ChatColor.GRAY + "No new record.");  
+	        		  }
+        	      }else{
+               		  p.sendMessage(plugin.prefix + ChatColor.GREEN + "You finished the arena with a time of: " + ChatColor.GOLD + this.plugin.timemin.get(p.getName())+ "min" +this.plugin.timer.get(p.getName())+ "sek");
+               		  p.sendMessage(plugin.prefix + ChatColor.GRAY + "No new record.");  
+        	      }
+        	  }
+        	  
+
         	  this.plugin.saveConfig();
         	  plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
         		  private Player player;
@@ -279,7 +424,6 @@ public class Listeners
 
   private void RocketLauncher(Player player)
 	    {
-	    int power = (int)(Math.random()*3)+1;
 	    int type = (int)(Math.random()*5)+1;
 	 
 	    Type typen = Type.BALL;
@@ -293,7 +437,7 @@ public class Listeners
 	    FireworkMeta fireworkmeta = fireworks.getFireworkMeta();
 	    FireworkEffect effect = FireworkEffect.builder().flicker(random.nextBoolean()).withColor(colorchoose()).withFade(colorchoose()).with(typen).trail(random.nextBoolean()).build();
 	    fireworkmeta.addEffect(effect);
-	    fireworkmeta.setPower(power);
+	    fireworkmeta.setPower(1);
 	    fireworks.setFireworkMeta(fireworkmeta);
 	}
 	 
@@ -406,37 +550,4 @@ public void hideall(Player p){
 		 ScoreboardManager manager = Bukkit.getScoreboardManager();
 		    p.setScoreboard(manager.getNewScoreboard());
 	 }
-	 
-	   public void setupScoreboard(Player p){
-			 FileConfiguration cfg = this.plugin.getConfig();
-			    ScoreboardManager manager = Bukkit.getScoreboardManager();
-			    Scoreboard board = manager.getNewScoreboard();
-		 
-			     String none = "§r";
-			     String PluginName = ChatColor.GOLD + "Jump" + ChatColor.DARK_AQUA +"Game";
-			     String ArenaName = ChatColor.RED + cfg.getString("PlayerInfo." + p.getName() + ".Arena");
-			     String ArenaPre = ChatColor.DARK_AQUA + "You are in the arena:";
-			     String FailsPre = ChatColor.DARK_AQUA + "Times you failed:";
-			     String Fails = ChatColor.RED + "" + cfg.getInt("PlayerInfo." + p.getName() + ".failsact");
-			     Objective objective = board.registerNewObjective("test", "SideBoard");
-			     objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-			     objective.setDisplayName(ChatColor.BOLD + "§2Zwergen§3Craft");
-			     Score top = objective.getScore(none);
-			     top.setScore(99);
-			    Score name = objective.getScore(PluginName);
-			    name.setScore(98);
-			    Score none1 = objective.getScore(none);
-			     none1.setScore(97);
-			     Score arp1 = objective.getScore(ArenaPre);
-			     arp1.setScore(96);
-			    Score sited1 = objective.getScore(ArenaName);
-			    sited1.setScore(95);
-			    Score none2 = objective.getScore(none);
-			     none2.setScore(94);
-			    Score failspre1 = objective.getScore(FailsPre);
-			    failspre1.setScore(93);
-			    Score fails1 = objective.getScore(Fails);
-			    fails1.setScore(92);
-			     p.setScoreboard(board);
-		}
 }
